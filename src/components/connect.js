@@ -162,6 +162,10 @@ export default function connect(mapStateToProps, mapDispatchToProps, mergeProps,
 
       updateStatePropsIfNeeded() {
         const nextStateProps = this.computeStateProps(this.store, this.props)
+        //console.log("next: ");
+        //console.log(nextStateProps);
+        //console.log("this: ");
+        //console.log(this.stateProps);
         if (this.stateProps && shallowEqual(nextStateProps, this.stateProps)) {
           return false
         }
@@ -247,7 +251,7 @@ export default function connect(mapStateToProps, mapDispatchToProps, mergeProps,
           return
         }
 
-        if (pure) { // Removed && !this.doStatePropsDependOnOwnProps) { to avoid excess calls to setState().
+        if (pure) {// && !this.doStatePropsDependOnOwnProps) { //to avoid excess calls to setState().
           const haveStatePropsChanged = tryCatch(this.updateStatePropsIfNeeded, this)
           if (!haveStatePropsChanged) {
             return

@@ -1509,6 +1509,8 @@ describe('React', () => {
       @connect((state, parentProps) => {
         childMapStateInvokes++
         // The state from parent props should always be consistent with the current state
+        //console.log(state);
+        //console.log(parentProps.parentState);
         expect(state).toEqual(parentProps.parentState)
         return {}
       })
@@ -1537,6 +1539,82 @@ describe('React', () => {
       const node = container.getWrappedInstance().refs.button
       TestUtils.Simulate.click(node)
       expect(childMapStateInvokes).toBe(3)
+
+      // In future all setState calls will be batched[1]. Uncomment when it
+      // happens. For now redux-batched-updates middleware can be used as
+      // workaround this.
+      //
+      // [1]: https://twitter.com/sebmarkbage/status/642366976824864768
+      //
+      // store.dispatch({ type: 'APPEND', body: 'd' })
+      // expect(childMapStateInvokes).toBe(4)
+    })
+
+    it('should not call setState when mapState does not produce change', () => {
+      const store = createStore(stringBuilder)
+
+      store.dispatch({ type: 'APPEND', body: 'a' })
+      let mapStateInvokes = 0
+      let propUpdates = 0
+      let renderCalls = 0
+      let setStateCalls = 0
+
+      @connect((state, props) => {
+          mapStateInvokes++;
+          console.log(state);
+          console.log(props);
+          return {state: state};
+      }, null)
+      class Container extends Component {
+        componentWillUpdate() {
+          propUpdates++;
+          console.log(this.props);
+        }
+
+        render() {
+          console.log(renderCalls);
+          return (
+            <div>
+              <button ref="button">{this.props.state}</button>
+            </div>
+          )
+        }
+      }
+
+      Container.prototype.setState_original = Container.prototype.setState;
+      var newSetState = function(state) {
+        console.log('Set State: ');
+        console.log(state.storeState);
+        setStateCalls++;
+        return this.setState_original(state);
+      };
+      Container.prototype.setState = newSetState;
+
+      Container.prototype.oldRender = Container.prototype.render;
+      var newRender = function() {
+        console.log("newRender");
+        renderCalls++;
+        return this.oldRender();
+      };
+      Container.prototype.render = newRender;
+
+      const tree = TestUtils.renderIntoDocument(
+        <ProviderMock store={store}>
+          <Container state="a" />
+        </ProviderMock>
+      )
+
+      // expect(propUpdates).toBe(1)
+
+      // The store state stays consistent when setState calls are batched
+      store.dispatch({ type: 'APPEND', body: 'c' })
+      expect(renderCalls).toBe(1)
+
+      store.dispatch({ type: 'APPEND', body: 'a' })
+      expect(renderCalls).toBe(1)
+
+      store.dispatch({ type: 'APPEND', body: 'c' })
+      expect(renderCalls).toBe(1)
 
       // In future all setState calls will be batched[1]. Uncomment when it
       // happens. For now redux-batched-updates middleware can be used as

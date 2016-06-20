@@ -4,3 +4,4 @@ npm-debug.log
 dist
 lib
 coverage
+phantomjs-2.1.1-windows
